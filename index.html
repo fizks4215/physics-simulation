@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Projectile Motion Simulation</title>
+
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        background: #f4f6f8;
+        color: #222;
+    }
+
+    header {
+        background: #17202a;
+        color: white;
+        text-align: center;
+        padding: 20px;
+    }
+
+    .container {
+        max-width: 1000px;
+        margin: 25px auto;
+        padding: 20px;
+    }
+
+    .controls {
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    label {
+        display: block;
+        margin-top: 12px;
+        font-weight: bold;
+    }
+
+    input[type="range"] {
+        width: 100%;
+    }
+
+    .value {
+        font-weight: normal;
+        color: #1565c0;
+    }
+
+    button {
+        padding: 10px 18px;
+        margin: 15px 5px 0 0;
+        border: none;
+        border-radius: 7px;
+        cursor: pointer;
+        background: #1565c0;
+        color: white;
+        font-size: 15px;
+    }
+
+    button:hover {
+        background: #0d47a1;
+    }
+
+    canvas {
+        width: 100%;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .results {
+        background: white;
+        padding: 20px;
+        margin-top: 20px;
+        border-radius: 12px;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .result-box {
+        text-align: center;
+        padding: 10px;
+        background: #eef3f8;
+        border-radius: 8px;
+    }
+
+    .result-box strong {
+        display: block;
+        font-size: 20px;
+        color: #1565c0;
+        margin-top: 5px;
+    }
+
+    @media(max-width:700px) {
+        .results {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>Projectile Motion Simulation</h1>
+    <p>Interactive Physics Simulation</p>
+</header>
+
+<div class="container">
+
+<div class="controls">
+
+    <label>
+        Initial Velocity:
+        <span class="value" id="velocityValue">20 m/s</span>
+    </label>
+    <input type="range" id="velocity" min="5" max="50" value="20">
+
+    <label>
+        Launch Angle:
+        <span class="value" id="angleValue">45°</span>
+    </label>
+    <input type="range" id="angle" min="5" max="85" value="45">
+
+    <label>
+        Gravity:
+        <span class="value" id="gravityValue">9.8 m/s²</span>
+    </label>
+    <input type="range" id="gravity" min="1" max="20" step="0.1" value="9.8">
+
+    <br>
+
+    <button onclick="startSimulation()">Start</button>
+    <button onclick="pauseSimulation()">Pause</button>
+    <button onclick="resetSimulation()">Reset</button>
+
+</div>
+
+<canvas id="canvas" width="900" height="450"></canvas>
+
+<div class="results">
+
+    <div class="result-box">
+        Range
+        <strong id="rangeResult">0 m</strong>
+    </div>
+
+    <div class="result-box">
+        Maximum Height
+        <strong id="heightResult">0 m</strong>
+    </div>
+
+    <div class="result-box">
+        Flight Time
+        <strong id="timeResult">0 s</strong>
+    </div>
+
+</div>
+
+</div>
+
+<script>
+
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+const velocitySlider = document.getElementById("velocity");
+const angleSlider = document.getElementById("angle");
+const gravitySlider = document.getElementById("gravity");
+
+const velocityValue = document.getElementById("velocityValue");
+const angleValue = document.getElementById("angleValue");
+const gravityValue = document.getElementById("gravityValue");
+
+let animationId = null;
+let startTime = null;
+let running = false;
+
+function updateValues() {
+
+    velocityValue.textContent = velocitySlider.value + " m/s";
+    angleValue.textContent = angleSlider.value + "°";
+    gravityValue.textContent = gravitySlider.value + " m/s²";
+
+    calculateResults();
+}
+
+function calculateResults() {
+
+    const v = Number(velocitySlider.value);
+    const angle = Number(angleSlider.value) * Math.PI / 180;
+    const g = Number(gravitySlider.value);
+
+    const range = (v * v * Math.sin(2 * angle)) / g;
+
+    const height = (v * v * Math.sin(angle) ** 2) / (2 * g);
+
+    const time = (2 * v * Math.sin(angle)) / g;
+
+    document.getElementById("rangeResult").textContent =
+        range.toFixed(2) + " m";
+
+    document.getElementById("heightResult").textContent =
+        height.toFixed(2) + " m";
+
+    document.getElementById("timeResult").textContent =
+        time.toFixed(2) + " s";
+}
+
+velocitySlider.addEventListener("input", updateValues);
+angleSlider.addEventListener("input", updateValues);
+gravitySlider.addEventListener("input", updateValues);
+
+function drawScene(t = 0) {
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const v = Number(velocitySlider.value);
+    const angle = Number(angleSlider.value) * Math.PI / 180;
+    const g = Number(gravitySlider.value);
+
+    const range = (v * v * Math.sin(2 * angle)) / g;
+    const height = (v * v * Math.sin(angle) ** 2) / (2 * g);
+
+    const margin = 60;
+
+    const scaleX = (canvas.width - 2 * margin) / range;
+    const scaleY = (canvas.height - 2 * margin) / height;
+
+    const scale = Math.min(scaleX, scaleY);
+
+    // Ground
+    ctx.beginPath();
+    ctx.moveTo(margin, canvas.height - margin);
+    ctx.lineTo(canvas.width - margin, canvas.height - margin);
+    ctx.strokeStyle = "#333";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Trajectory
+    ctx.beginPath();
+
+    for (let time = 0; time <= 2 * v * Math.sin(angle) / g; time += 0.03) {
+
+        const x = v * Math.cos(angle) * time;
+        const y = v * Math.sin(angle) * time
+                - 0.5 * g * time * time;
+
+        const px = margin + x * scale;
+        const py = canvas.height - margin - y * scale;
+
+        if (time === 0)
+            ctx.moveTo(px, py);
+        else
+            ctx.lineTo(px, py);
+    }
+
+    ctx.strokeStyle = "#1565c0";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Projectile
+    const x = v * Math.cos(angle) * t;
+    const y = v * Math.sin(angle) * t - 0.5 * g * t * t;
+
+    if (y >= 0 && x <= range) {
+
+        const px = margin + x * scale;
+        const py = canvas.height - margin - y * scale;
+
+        ctx.beginPath();
+        ctx.arc(px, py, 9, 0, 2 * Math.PI);
+        ctx.fillStyle = "#d32f2f";
+        ctx.fill();
+    }
+}
+
+function startSimulation() {
+
+    if (running) return;
+
+    running = true;
+    startTime = performance.now();
+
+    function animate(currentTime) {
+
+        if (!running) return;
+
+        const elapsed = (currentTime - startTime) / 1000;
+
+        const v = Number(velocitySlider.value);
+        const angle = Number(angleSlider.value) * Math.PI / 180;
+        const g = Number(gravitySlider.value);
+
+        const flightTime = 2 * v * Math.sin(angle) / g;
+
+        if (elapsed > flightTime) {
+            running = false;
+            drawScene(flightTime);
+            return;
+        }
+
+        drawScene(elapsed);
+
+        animationId = requestAnimationFrame(animate);
+    }
+
+    animationId = requestAnimationFrame(animate);
+}
+
+function pauseSimulation() {
+
+    running = false;
+
+    if (animationId) {
+        cancelAnimationFrame(animationId);
+    }
+}
+
+function resetSimulation() {
+
+    pauseSimulation();
+    drawScene(0);
+}
+
+updateValues();
+drawScene(0);
+
+</script>
+
+</body>
+</html>
